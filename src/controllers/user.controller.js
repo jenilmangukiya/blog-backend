@@ -30,6 +30,13 @@ const generateAccessAndRefreshToken = async (userId) => {
 export const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, password } = req.body;
 
+  let role = "user";
+  if (req?.user?._id && req?.user?.role === "superadmin") {
+    if (req.body?.role === "user" || req.body?.role === "superadmin") {
+      role = req.body?.role;
+    }
+  }
+
   if (!fullName?.trim() || !email?.trim() || !password?.trim()) {
     throw new ApiError(400, "All fields are required");
   }
@@ -46,7 +53,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email: email.trim().toLowerCase(),
     fullName: fullName.trim().toLowerCase(),
     password: password,
-    role: "user",
+    role: role,
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -189,4 +196,11 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, {}, "Password change successfully"));
+});
+
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select(
+    "-password -refreshToken"
+  );
+  res.status(200).json(new ApiResponse(200, user, "success"));
 });
