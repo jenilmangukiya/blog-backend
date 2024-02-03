@@ -10,12 +10,16 @@ const blogSchema = new mongoose.Schema({
     trim: true,
     required: true,
   },
-  desc: {
+  description: {
     type: String,
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
+  },
+  isPublished: {
+    type: Boolean,
+    default: false,
   },
 });
 

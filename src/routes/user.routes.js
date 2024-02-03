@@ -9,6 +9,7 @@ import {
   updateProfilePic,
   updateUserInfo,
   deleteUser,
+  getUsers,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -18,6 +19,7 @@ const router = Router();
 router.route("/register").post(registerUser);
 router.route("/login").post(loginUser);
 
+router.route("/").get(verifyJWT, getUsers);
 router
   .route("/:userId")
   .patch(verifyJWT, updateUserInfo)

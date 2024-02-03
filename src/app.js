@@ -20,9 +20,11 @@ app.use(cookieParser()); // Cookies Middleware
 // Routes
 import healthcheckRouter from "./routes/healthcheck.routes.js";
 import userRoute from "./routes/user.routes.js";
+import blogRoute from "./routes/blog.routes.js";
 
 // Routes Declaration
 app.use("/api/v1/healthcheck", healthcheckRouter);
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/blogs", blogRoute);
 
 export { app };

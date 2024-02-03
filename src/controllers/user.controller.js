@@ -121,7 +121,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 export const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies?.refreshToken || req.body?.refreshToken;
-  console.log("incomingRefreshToken", incomingRefreshToken);
+
   if (!incomingRefreshToken) {
     throw new ApiError(
       400,
@@ -312,4 +312,44 @@ export const deleteUser = asyncHandler(async (req, res) => {
   if (user?.avatar) await removeFromCloudinary(user?.avatar);
 
   res.status(200).json(new ApiResponse(200, user));
+});
+
+export const getUsers = asyncHandler(async (req, res) => {
+  const { page = 1, sortBy, sortType, query, limit = 10 } = req.query;
+
+  if (req?.user?.role !== "superadmin") {
+    throw new ApiError(401, "Unauthorized to Use list of Users");
+  }
+  const aggregation = [];
+
+  if (query) {
+    aggregation.push({
+      $match: {
+        $or: [
+          { title: { $regex: new RegExp(query, "i") } },
+          { fullName: { $regex: new RegExp(query, "i") } },
+        ],
+      },
+    });
+  }
+
+  if (sortBy && ["email", "fullName", "createdAt"].includes(sortBy)) {
+    const sortOrder = sortType.toLowerCase() === "desc" ? -1 : 1;
+    aggregation.push({
+      $sort: {
+        [sortBy]: sortOrder,
+      },
+    });
+  }
+
+  const options = {
+    page: +page,
+    limit: +limit,
+  };
+
+  const pipeline = User.aggregate(aggregation);
+
+  const userPaginated = await User.aggregatePaginate(pipeline, options);
+
+  res.status(200).json(new ApiResponse(200, userPaginated));
 });
