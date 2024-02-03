@@ -3,6 +3,11 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+import {
+  removeFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
+import path from "path";
 
 const cookiesOptions = {
   httpOnly: true,
@@ -203,4 +208,45 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
   res.status(200).json(new ApiResponse(200, user, "success"));
+});
+
+export const updateProfilePic = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req?.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError("Avatar is required");
+  }
+
+  // 2MB limit to image upload
+  if (req?.file.size > 2048000) {
+    throw new ApiError(
+      400,
+      "File is too big, Please upload file less then 2MB"
+    );
+  }
+
+  // checking file type
+  const ext = path.extname(req?.file.originalname);
+  if (ext !== ".png" && ext !== ".jpg" && ext !== ".jpeg") {
+    throw new ApiError(400, "Please Upload file in image format");
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatar?.url) {
+    throw new ApiError(500, "something went wrong while uploading Avatar");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { avatar: avatar.url },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (req.user?.avatar) {
+    await removeFromCloudinary(req.user.avatar);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Profile picture updated"));
 });
