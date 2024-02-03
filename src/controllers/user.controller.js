@@ -2,10 +2,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
+import jwt from "jsonwebtoken";
 
 const cookiesOptions = {
   httpOnly: true,
   secure: true,
+  maxAge: 24 * 60 * 60 * 1000,
 };
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -101,6 +103,60 @@ export const loginUser = asyncHandler(async (req, res) => {
         "User logged in successfully"
       )
     );
+});
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken =
+    req.cookies?.refreshToken || req.body?.refreshToken;
+  console.log("incomingRefreshToken", incomingRefreshToken);
+  if (!incomingRefreshToken) {
+    throw new ApiError(
+      400,
+      "Please pass refreshToken to generate New AccessToken"
+    );
+  }
+
+  const decodedToken = jwt.verify(
+    incomingRefreshToken,
+    process.env.REFRESH_TOKEN_SECRET
+  );
+
+  if (!decodedToken) {
+    throw new ApiError(400, "Invalid refreshToken");
+  }
+
+  try {
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new ApiError(401, "Invalid refresh token");
+    }
+
+    if (user.refreshToken !== incomingRefreshToken) {
+      throw new ApiError(401, "Refresh token is expired or used");
+    }
+
+    const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
+      user._id
+    );
+
+    res
+      .status(200)
+      .cookie("accessToken", accessToken, cookiesOptions)
+      .cookie("refreshToken", refreshToken, {
+        ...cookiesOptions,
+        maxAge: 10 * 24 * 60 * 60 * 1000, // For 10d
+      })
+      .json(
+        new ApiResponse(
+          200,
+          { refreshToken, accessToken },
+          "Access token refreshed"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid refresh Token");
+  }
 });
 
 export const logout = asyncHandler(async (req, res) => {
