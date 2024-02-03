@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 
-const cookiesOption = {
+const cookiesOptions = {
   httpOnly: true,
   secure: true,
 };
@@ -89,8 +89,11 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .cookie("accessToken", accessToken, cookiesOption)
-    .cookie("refreshToken", refreshToken, cookiesOption)
+    .cookie("accessToken", accessToken, cookiesOptions)
+    .cookie("refreshToken", refreshToken, {
+      ...cookiesOptions,
+      maxAge: 10 * 24 * 60 * 60 * 1000, // For 10d
+    })
     .json(
       new ApiResponse(
         200,
@@ -107,7 +110,7 @@ export const logout = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .clearCookie("accessToken", cookiesOption)
-    .clearCookie("refreshToken", cookiesOption)
+    .clearCookie("accessToken", cookiesOptions)
+    .clearCookie("refreshToken", cookiesOptions)
     .json(new ApiResponse(200, {}, "Logout success"));
 });
