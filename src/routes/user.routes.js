@@ -7,6 +7,8 @@ import {
   registerUser,
   getCurrentUser,
   updateProfilePic,
+  updateUserInfo,
+  deleteUser,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -16,6 +18,10 @@ const router = Router();
 router.route("/register").post(registerUser);
 router.route("/login").post(loginUser);
 
+router
+  .route("/:userId")
+  .patch(verifyJWT, updateUserInfo)
+  .delete(verifyJWT, deleteUser);
 router
   .route("/updateProfilePic")
   .post(upload.single("avatar"), verifyJWT, updateProfilePic);

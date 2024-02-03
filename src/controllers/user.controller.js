@@ -8,6 +8,7 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import path from "path";
+import mongoose from "mongoose";
 
 const cookiesOptions = {
   httpOnly: true,
@@ -238,7 +239,7 @@ export const updateProfilePic = asyncHandler(async (req, res) => {
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { avatar: avatar.url },
+    { $set: { avatar: avatar.url } },
     { new: true }
   ).select("-password -refreshToken");
 
@@ -249,4 +250,66 @@ export const updateProfilePic = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Profile picture updated"));
+});
+
+export const updateUserInfo = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { fullName, email } = req.body;
+
+  if (!fullName && !email) {
+    throw new ApiError(400, "Nothing to Update!, please pass some Data");
+  }
+
+  // check if the User Id is in correct format
+  if (!mongoose.Types.ObjectId.isValid(userId))
+    throw new ApiError(404, "Invalid User");
+
+  const updateFields = {};
+
+  if (email && email !== req.user?.email) {
+    const user = await User.findOne({ email: email });
+    if (user) {
+      throw new ApiError(400, "user with this email already exists!");
+    } else {
+      updateFields.email = email;
+    }
+  }
+
+  if (fullName) updateFields.fullName = fullName;
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: updateFields,
+    },
+    { new: true }
+  );
+  if (!updatedUser) {
+    throw new ApiResponse(500, "Something went wrong while updating data");
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "User updated Successfully"));
+});
+
+export const deleteUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // check if the User Id is in correct format
+  if (!mongoose.Types.ObjectId.isValid(userId))
+    throw new ApiError(404, "Invalid User");
+
+  if (req.user?.role !== "superadmin") {
+    throw new ApiError(401, "Unauthorized to Delete an User");
+  }
+
+  const user = await User.findByIdAndDelete(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user?.avatar) await removeFromCloudinary(user?.avatar);
+
+  res.status(200).json(new ApiResponse(200, user));
 });

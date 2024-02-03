@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const userSchema = new mongoose.Schema(
   {
@@ -37,6 +38,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.plugin(mongooseAggregatePaginate);
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
