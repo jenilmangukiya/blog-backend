@@ -264,6 +264,10 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(userId))
     throw new ApiError(404, "Invalid User");
 
+  if (req.user?.role !== "superadmin" && userId !== req.user._id) {
+    throw new ApiError(401, "unAuthorized to Update User");
+  }
+
   const updateFields = {};
 
   if (email && email !== req.user?.email) {
